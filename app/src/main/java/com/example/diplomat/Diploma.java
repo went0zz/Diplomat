@@ -4,11 +4,10 @@ import androidx.room.Entity;
 
 import java.util.List;
 
-@Entity(tableName = "diplomas")
+//@Entity(tableName = "diplomas")
 public class Diploma {
     public int token;
     private final int schoolid;
-    public int schoolId;
     String name;
     String surname;
     private final String patronymic;
