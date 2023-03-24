@@ -5,21 +5,17 @@ import android.app.Application;
 import androidx.annotation.NonNull;
 import androidx.lifecycle.AndroidViewModel;
 import androidx.lifecycle.LiveData;
-import androidx.lifecycle.MutableLiveData;
 
 import java.util.List;
 
 import io.reactivex.rxjava3.android.schedulers.AndroidSchedulers;
-import io.reactivex.rxjava3.core.Scheduler;
 import io.reactivex.rxjava3.disposables.CompositeDisposable;
 import io.reactivex.rxjava3.disposables.Disposable;
-import io.reactivex.rxjava3.functions.Action;
 import io.reactivex.rxjava3.schedulers.Schedulers;
 
 public class MainActivityViewModel extends AndroidViewModel {
-    private DiplomasDatabase diplomasDatabase;
-    private CompositeDisposable compositeDisposable;
-    private MutableLiveData<Boolean> addNoteLiveData;
+    private final DiplomasDatabase diplomasDatabase;
+    private final CompositeDisposable compositeDisposable;
     public MainActivityViewModel(@NonNull Application application) {
         super(application);
         diplomasDatabase = DiplomasDatabase.getInstance(application);
@@ -34,8 +30,10 @@ public class MainActivityViewModel extends AndroidViewModel {
     public LiveData<List<Diploma>> getDiplomas() {
         return diplomasDatabase.DiplomasDAO().getDiplomas();
     }
-    public void add(Diploma diploma) {
-        Disposable disposable = diplomasDatabase.DiplomasDAO().add(diploma).subscribeOn(Schedulers.io()).observeOn(AndroidSchedulers.mainThread()).subscribe();
-        compositeDisposable.add(disposable);
+    public void add(List<Diploma> diplomas) {
+        for (Diploma diploma: diplomas) {
+            Disposable disposable = diplomasDatabase.DiplomasDAO().add(diploma).subscribeOn(Schedulers.io()).observeOn(AndroidSchedulers.mainThread()).subscribe();
+            compositeDisposable.add(disposable);
+        }
     }
 }

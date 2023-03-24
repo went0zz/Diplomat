@@ -16,7 +16,7 @@ public class Diploma {
     public String pantonymic;
     public String place;
 
-    public Diploma(int token, int schoolid, String name, String surname, String patronymic, String place) {
+    public Diploma(int token, String name, String surname, String patronymic, int schoolid, String place) {
         this.token = token;
         this.schoolid = schoolid;
         this.name = name;
@@ -25,7 +25,7 @@ public class Diploma {
         this.place = place;
     }
     @Ignore
-    public Diploma(int schoolid, String name, String surname, String patronymic, String place) {
+    public Diploma(String name, String surname, String patronymic, int schoolid, String place) {
 
         this.token = 0;
         this.schoolid = schoolid;
