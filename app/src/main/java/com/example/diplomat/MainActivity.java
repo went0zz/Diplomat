@@ -2,7 +2,9 @@ package com.example.diplomat;
 
 import static android.content.ContentValues.TAG;
 
+import android.Manifest;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
@@ -39,10 +41,18 @@ import java.util.Objects;
 import io.reactivex.rxjava3.android.schedulers.AndroidSchedulers;
 import io.reactivex.rxjava3.core.Completable;
 import io.reactivex.rxjava3.core.Scheduler;
+import io.reactivex.rxjava3.functions.Action;
 import io.reactivex.rxjava3.schedulers.Schedulers;
 
 public class MainActivity extends AppCompatActivity {
-    private FloatingActionButton floatingActionButton;
+
+    private static final int READ_EXCEL_FILE = 1001;
+    private static final int MY_PERMISSIONS_REQUEST_READ_EXTERNAL_STORAGE = 1002;
+    private static final int MY_PERMISSIONS_REQUEST_WRITE_EXTERNAL_STORAGE = 1003;
+    private static final int MY_PERMISSIONS_REQUEST_STORAGE = 1004;
+    private static final int MY_PERMISSIONS_REQUEST_CAMERA = 1005;
+
+    private FloatingActionButton floatingActionButton, floatingCameraActionButton;
     private RecyclerView recyclerView;
     private static MainActivityViewModel mainActivityViewModel;
     @Override
@@ -51,13 +61,19 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
         floatingActionButton = findViewById(R.id.floating);
         recyclerView = findViewById(R.id.notesRecycler);
+        floatingCameraActionButton = findViewById(R.id.floating_camera);
         mainActivityViewModel = new ViewModelProvider(this).get(MainActivityViewModel.class);
-        floatingActionButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
+        floatingActionButton.setOnClickListener(view -> {
+            if (askForReadExternalStorage() && askForWriteExternalStorage() && askForStorage())
                 callChooseFileFromDevice();
+        });
+        floatingCameraActionButton.setOnClickListener(view -> {
+            if (askForCamera()) {
+                Intent intent = new Intent(MainActivity.this, CameraActivity.class);
+                startActivity(intent);
             }
         });
+
 
     }
     private void callChooseFileFromDevice() {
@@ -66,13 +82,13 @@ public class MainActivity extends AppCompatActivity {
         intent.setType("*/*");
         String[] mimetypes = {"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "application/vnd.ms-excel"};
         intent.putExtra(Intent.EXTRA_MIME_TYPES, mimetypes);
-        startActivityForResult(intent, 1001);
+        startActivityForResult(intent, READ_EXCEL_FILE);
     }
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-        if (requestCode == 1001 && resultCode == RESULT_OK) {
+        if (requestCode == READ_EXCEL_FILE && resultCode == RESULT_OK) {
             if (data != null) {
                 File file;
                 try {
@@ -82,17 +98,18 @@ public class MainActivity extends AppCompatActivity {
                 }
                 if (file.isFile())
                     Log.d(TAG, "onActivityResult: " + file);
-//                try {
-//                    readFromExcel(file).subscribeOn(Schedulers.io()).observeOn(AndroidSchedulers.mainThread()).subscribe();
-//                } catch (IOException | InvalidFormatException e) {
-//                    throw new RuntimeException(e);
-//                }
+                try {
+                    readFromExcel(file).subscribeOn(Schedulers.io()).observeOn(AndroidSchedulers.mainThread()).subscribe();
+                } catch (IOException | InvalidFormatException e) {
+                    throw new RuntimeException(e);
+                }
             }
         }
     }
-    public static Completable readFromExcel(File file) throws IOException, InvalidFormatException {
-        XSSFWorkbook myExcelBook;
-        myExcelBook = new XSSFWorkbook(Files.newInputStream(file.toPath()));
+    public Completable readFromExcel(File file) throws IOException, InvalidFormatException {
+
+        HSSFWorkbook myExcelBook;
+        myExcelBook = new HSSFWorkbook(Files.newInputStream(file.toPath()));
         Sheet sheet = myExcelBook.getSheetAt(0);
         List<Diploma> diplomas = new ArrayList<>();
         for (Row row: sheet) {
@@ -105,5 +122,49 @@ public class MainActivity extends AppCompatActivity {
         myExcelBook.close();
         mainActivityViewModel.add(diplomas);
         return null;
+    }
+    public boolean askForReadExternalStorage() {
+        Log.d(TAG, "askForReadExternalStorage: brother moment");
+        if (checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE)
+                != PackageManager.PERMISSION_GRANTED) {
+            Log.d(TAG, "askForReadExternalStorage");
+            requestPermissions(new String[]{Manifest.permission.READ_EXTERNAL_STORAGE},
+                    MY_PERMISSIONS_REQUEST_READ_EXTERNAL_STORAGE);
+        }
+        return checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE)
+                == PackageManager.PERMISSION_GRANTED;
+    }
+    public boolean askForWriteExternalStorage() {
+        Log.d(TAG, "askForReadExternalStorage: brother moment");
+        if (checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE)
+                != PackageManager.PERMISSION_GRANTED) {
+            Log.d(TAG, "askForReadExternalStorage");
+            requestPermissions(new String[]{Manifest.permission.READ_EXTERNAL_STORAGE},
+                    MY_PERMISSIONS_REQUEST_WRITE_EXTERNAL_STORAGE);
+        }
+        return checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE)
+                == PackageManager.PERMISSION_GRANTED;
+    }
+    public boolean askForStorage() {
+        Log.d(TAG, "askForReadExternalStorage: brother moment");
+        if (checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE)
+                != PackageManager.PERMISSION_GRANTED) {
+            Log.d(TAG, "askForReadExternalStorage");
+            requestPermissions(new String[]{Manifest.permission.READ_EXTERNAL_STORAGE},
+                    MY_PERMISSIONS_REQUEST_STORAGE);
+        }
+        return checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE)
+                == PackageManager.PERMISSION_GRANTED;
+    }
+    public boolean askForCamera() {
+        Log.d(TAG, "askForReadExternalStorage: brother moment");
+        if (checkSelfPermission(Manifest.permission.CAMERA)
+                != PackageManager.PERMISSION_GRANTED) {
+            Log.d(TAG, "askForReadExternalStorage");
+            requestPermissions(new String[]{Manifest.permission.CAMERA},
+                    MY_PERMISSIONS_REQUEST_CAMERA);
+        }
+        return checkSelfPermission(Manifest.permission.CAMERA)
+                == PackageManager.PERMISSION_GRANTED;
     }
 }

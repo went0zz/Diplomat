@@ -28,4 +28,13 @@
         app:srcCompat="@android:drawable/ic_input_add"
         android:tint="@android:color/background_light"
         android:layout_gravity="end|bottom"/>
+
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/floating_camera"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom"
+        android:clickable="true"
+        android:tint="@android:color/background_light"
+        app:srcCompat="@android:drawable/ic_menu_camera" />
 </androidx.coordinatorlayout.widget.CoordinatorLayout>
