@@ -20,6 +20,7 @@ import org.apache.poi.hssf.usermodel.HSSFWorkbook;
 import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
 import java.io.IOException;
 import java.net.URI;
@@ -102,8 +103,8 @@ public class MainActivity extends AppCompatActivity {
 
     public void readFromExcel(Uri uri) throws IOException, InvalidFormatException, URISyntaxException {
 
-        HSSFWorkbook myExcelBook;
-        myExcelBook = new HSSFWorkbook(getContentResolver().openInputStream(uri));
+        XSSFWorkbook myExcelBook;
+        myExcelBook = new XSSFWorkbook(getContentResolver().openInputStream(uri));
         Sheet sheet = myExcelBook.getSheetAt(0);
         List<Diploma> diplomas = new ArrayList<>();
         for (Row row : sheet) {
