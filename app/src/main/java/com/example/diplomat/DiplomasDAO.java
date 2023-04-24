@@ -15,4 +15,5 @@ public interface DiplomasDAO {
     LiveData<List<Diploma>> getDiplomas();
     @Insert
     Completable add(Diploma diploma);
+
 }
