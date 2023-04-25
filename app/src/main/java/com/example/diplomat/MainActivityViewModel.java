@@ -1,11 +1,13 @@
 package com.example.diplomat;
 
 import android.app.Application;
+import android.util.Log;
 
 import androidx.annotation.NonNull;
 import androidx.lifecycle.AndroidViewModel;
 import androidx.lifecycle.LiveData;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import io.reactivex.rxjava3.android.schedulers.AndroidSchedulers;
@@ -28,11 +30,14 @@ public class MainActivityViewModel extends AndroidViewModel {
         compositeDisposable.dispose();
     }
     public LiveData<List<Diploma>> getDiplomas() {
-        return diplomasDatabase.DiplomasDAO().getDiplomas();
+        return diplomasDatabase.diplomasDAO().getDiplomas();
+    }
+    public LiveData<Integer> count() {
+        return diplomasDatabase.diplomasDAO().count();
     }
     public void add(List<Diploma> diplomas) {
         for (Diploma diploma: diplomas) {
-            Disposable disposable = diplomasDatabase.DiplomasDAO().add(diploma).subscribeOn(Schedulers.io()).observeOn(AndroidSchedulers.mainThread()).subscribe();
+            Disposable disposable = diplomasDatabase.diplomasDAO().add(diploma).subscribeOn(Schedulers.io()).observeOn(AndroidSchedulers.mainThread()).subscribe();
             compositeDisposable.add(disposable);
         }
     }

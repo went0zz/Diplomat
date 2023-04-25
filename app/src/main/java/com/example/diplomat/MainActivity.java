@@ -8,6 +8,7 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
+import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Point;
 import android.graphics.Typeface;
@@ -19,6 +20,7 @@ import android.text.TextUtils;
 import android.util.Log;
 import android.view.Display;
 import android.view.WindowManager;
+import android.widget.ImageView;
 import android.widget.Toast;
 
 import androidx.annotation.Nullable;
@@ -28,6 +30,10 @@ import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
+import com.google.zxing.BarcodeFormat;
+import com.google.zxing.WriterException;
+import com.google.zxing.common.BitMatrix;
+import com.google.zxing.qrcode.QRCodeWriter;
 
 import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
 import org.apache.poi.ss.usermodel.Row;
@@ -105,27 +111,37 @@ public class MainActivity extends AppCompatActivity {
         myExcelBook = new XSSFWorkbook(getContentResolver().openInputStream(uri));
         Sheet sheet = myExcelBook.getSheetAt(0);
         List<Diploma> diplomas = new ArrayList<>();
+        List<Diploma> dpl = new ArrayList<>();
+        int idx = 0;
         for (Row row : sheet) {
-            diplomas.add(new Diploma(Objects.requireNonNull(mainActivityViewModel.getDiplomas().getValue()).size(), row.getCell(0).getStringCellValue(),
+            dpl.add(new Diploma(idx, row.getCell(0).getStringCellValue(),
                     row.getCell(1).getStringCellValue(),
                     row.getCell(2).getStringCellValue(),
                     (int) row.getCell(3).getNumericCellValue(),
                     row.getCell(4).getStringCellValue()));
+            diplomas.add(new Diploma(row.getCell(0).getStringCellValue(),
+                    row.getCell(1).getStringCellValue(),
+                    row.getCell(2).getStringCellValue(),
+                    (int) row.getCell(3).getNumericCellValue(),
+                    row.getCell(4).getStringCellValue()));
+            idx++;
         }
         myExcelBook.close();
         mainActivityViewModel.add(diplomas);
-        generatePDF(diplomas);
+        generatePDF(dpl);
     }
 
     private void generatePDF(List<Diploma> diplomas) {
         PdfDocument pdfDocument = new PdfDocument();
         Paint title = new Paint();
-
+        Paint paint = new Paint();
         int c = 1;
         for (Diploma diploma: diplomas) {
+
             PdfDocument.PageInfo mypageInfo = new PdfDocument.PageInfo.Builder(1120, 792, c).create();
             PdfDocument.Page myPage = pdfDocument.startPage(mypageInfo);
             Canvas canvas = myPage.getCanvas();
+            canvas.drawBitmap(generateQR(diploma.token), 56, 40, paint);
             title.setTypeface(Typeface.create(Typeface.DEFAULT, Typeface.NORMAL));
             title.setTypeface(Typeface.defaultFromStyle(Typeface.NORMAL));
             title.setColor(ContextCompat.getColor(this, R.color.purple_200));
@@ -135,14 +151,10 @@ public class MainActivity extends AppCompatActivity {
             c++;
             pdfDocument.finishPage(myPage);
         }
-        Log.d(TAG, "generatePDF: drista");
-
         File file = new File(Environment.getExternalStorageDirectory() + "/" + File.separator + "Diplomas.pdf");
-        Log.d(TAG, "generatePDF: huyyy");
         try {
 
             pdfDocument.writeTo(Files.newOutputStream(file.toPath()));
-            Log.d(TAG, "generatePDF: fole");
 
         } catch (IOException e) {
             e.printStackTrace();
@@ -183,50 +195,27 @@ public class MainActivity extends AppCompatActivity {
         return checkSelfPermission(Manifest.permission.CAMERA)
                 == PackageManager.PERMISSION_GRANTED;
     }
-    private Bitmap generateQRCode(int id) {
-        StringBuilder data = new StringBuilder(String.valueOf(id));
+    private Bitmap generateQR(int num) {
+        QRCodeWriter writer = new QRCodeWriter();
+        StringBuilder data = new StringBuilder(Integer.toString(num));
         while (data.length() != 8)
             data.insert(0, '0');
-        if (TextUtils.isEmpty(data.toString())) {
 
-            // if the edittext inputs are empty then execute
-            // this method showing a toast message.
-            Toast.makeText(MainActivity.this, "Enter some text to generate QR Code", Toast.LENGTH_SHORT).show();
-        } else {
-            // below line is for getting
-            // the windowmanager service.
-            WindowManager manager = (WindowManager) getSystemService(WINDOW_SERVICE);
-
-            // initializing a variable for default display.
-            Display display = manager.getDefaultDisplay();
-
-            // creating a variable for point which
-            // is to be displayed in QR Code.
-            Point point = new Point();
-            display.getSize(point);
-
-            // getting width and
-            // height of a point
-            int width = point.x;
-            int height = point.y;
-
-            // generating dimension from width and height.
-            int dimen = Math.min(width, height);
-            dimen = dimen * 3 / 4;
-            // setting this dimensions inside our qr code
-            // encoder to generate our qr code.
-            qrgEncoder = new QRGEncoder(data.toString(), null, QRGContents.Type.TEXT, dimen);
-            try {
-                // getting our qrcode in the form of bitmap.
-                bitmap = qrgEncoder.encodeAsBitmap();
-                // the bitmap is set inside our image
-                // view using .setimagebitmap method.
-                qrCodeIV.setImageBitmap(bitmap);
-            } catch (WriterException e) {
-                // this method is called for
-                // exception handling.
-                Log.e("Tag", e.toString());
+        try {
+            BitMatrix bitMatrix = writer.encode(data.toString(), BarcodeFormat.QR_CODE, 512, 512);
+            int width = bitMatrix.getWidth();
+            int height = bitMatrix.getHeight();
+            Bitmap bmp = Bitmap.createBitmap(width, height, Bitmap.Config.RGB_565);
+            for (int x = 0; x < width; x++) {
+                for (int y = 0; y < height; y++) {
+                    bmp.setPixel(x, y, bitMatrix.get(x, y) ? Color.BLACK : Color.WHITE);
+                }
             }
+            return bmp;
+        } catch (WriterException e) {
+            e.printStackTrace();
         }
+        return null;
     }
+
 }

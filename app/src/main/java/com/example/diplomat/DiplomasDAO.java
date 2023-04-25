@@ -11,6 +11,8 @@ import io.reactivex.rxjava3.core.Completable;
 
 @Dao
 public interface DiplomasDAO {
+    @Query("SELECT COUNT(*) FROM diplomas")
+    LiveData<Integer> count();
     @Query("SELECT * FROM diplomas")
     LiveData<List<Diploma>> getDiplomas();
     @Insert

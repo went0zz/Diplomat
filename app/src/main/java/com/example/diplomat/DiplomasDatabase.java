@@ -23,5 +23,5 @@ public abstract class DiplomasDatabase extends RoomDatabase {
         return instance;
     }
 
-    public abstract DiplomasDAO DiplomasDAO();
+    public abstract DiplomasDAO diplomasDAO();
 }
