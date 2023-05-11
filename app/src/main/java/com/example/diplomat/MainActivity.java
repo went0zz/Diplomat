@@ -1,5 +1,15 @@
 package com.example.diplomat;
 
+import android.os.Bundle;
+import android.widget.TextView;
+
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.lifecycle.ViewModelProvider;
+
+import com.budiyev.android.codescanner.CodeScanner;
+import com.budiyev.android.codescanner.CodeScannerView;
+import com.google.android.material.floatingactionbutton.FloatingActionButton;
+
 import static android.Manifest.permission.READ_EXTERNAL_STORAGE;
 import static android.content.ContentValues.TAG;
 
@@ -10,26 +20,15 @@ import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
-import android.graphics.Point;
 import android.graphics.Typeface;
 import android.graphics.pdf.PdfDocument;
 import android.net.Uri;
-import android.os.Bundle;
 import android.os.Environment;
-import android.text.TextUtils;
 import android.util.Log;
-import android.view.Display;
-import android.view.WindowManager;
-import android.widget.ImageView;
-import android.widget.Toast;
 
 import androidx.annotation.Nullable;
-import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
-import androidx.lifecycle.ViewModelProvider;
-import androidx.recyclerview.widget.RecyclerView;
 
-import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.zxing.BarcodeFormat;
 import com.google.zxing.WriterException;
 import com.google.zxing.common.BitMatrix;
@@ -46,41 +45,48 @@ import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
+import java.util.concurrent.atomic.AtomicInteger;
+
 
 public class MainActivity extends AppCompatActivity {
-
+    private CodeScanner mCodeScanner;
+    private TextView textView;
+    private MainActivityViewModel mainActivityViewModel;
+    private FloatingActionButton floatingActionButton;
     private static final int READ_EXCEL_FILE = 1001;
     private static final int MY_PERMISSIONS_REQUEST_READ_EXTERNAL_STORAGE = 1002;
     private static final int MY_PERMISSIONS_REQUEST_STORAGE = 1004;
     private static final int MY_PERMISSIONS_REQUEST_CAMERA = 1005;
 
-    private FloatingActionButton floatingActionButton, floatingCameraActionButton;
-    private RecyclerView recyclerView;
-    private static MainActivityViewModel mainActivityViewModel;
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        floatingActionButton = findViewById(R.id.floating);
-        recyclerView = findViewById(R.id.notesRecycler);
-        floatingCameraActionButton = findViewById(R.id.floating_camera);
+        CodeScannerView scannerView = findViewById(R.id.scanner_view);
         mainActivityViewModel = new ViewModelProvider(this).get(MainActivityViewModel.class);
+        floatingActionButton = findViewById(R.id.floatingActionButton);
+        textView = findViewById(R.id.scanResult);
+        mCodeScanner = new CodeScanner(this, scannerView);
+
+        mCodeScanner.setDecodeCallback(result -> runOnUiThread(() -> mainActivityViewModel.getDiploma(Integer.parseInt(result.getText())).observe(MainActivity.this, diploma -> textView.setText(diploma.surname + ' ' + diploma.name + ' ' + diploma.patronymic))));
+        scannerView.setOnClickListener(view -> mCodeScanner.startPreview());
         floatingActionButton.setOnClickListener(view -> {
             if (askForReadExternalStorage() && askForStorage())
                 callChooseFileFromDevice();
         });
-        floatingCameraActionButton.setOnClickListener(view -> {
-            if (askForCamera()) {
-                Intent intent = new Intent(MainActivity.this, CameraActivity.class);
-                startActivity(intent);
-            }
-        });
-
-
     }
 
+    @Override
+    protected void onResume() {
+        super.onResume();
+        mCodeScanner.startPreview();
+    }
+
+    @Override
+    protected void onPause() {
+        mCodeScanner.releaseResources();
+        super.onPause();
+    }
     private void callChooseFileFromDevice() {
         Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
         intent.addCategory(Intent.CATEGORY_OPENABLE);
@@ -111,44 +117,37 @@ public class MainActivity extends AppCompatActivity {
         myExcelBook = new XSSFWorkbook(getContentResolver().openInputStream(uri));
         Sheet sheet = myExcelBook.getSheetAt(0);
         List<Diploma> diplomas = new ArrayList<>();
-        List<Diploma> dpl = new ArrayList<>();
-        int idx = 0;
         for (Row row : sheet) {
-            dpl.add(new Diploma(idx, row.getCell(0).getStringCellValue(),
-                    row.getCell(1).getStringCellValue(),
-                    row.getCell(2).getStringCellValue(),
-                    (int) row.getCell(3).getNumericCellValue(),
-                    row.getCell(4).getStringCellValue()));
             diplomas.add(new Diploma(row.getCell(0).getStringCellValue(),
                     row.getCell(1).getStringCellValue(),
                     row.getCell(2).getStringCellValue(),
                     (int) row.getCell(3).getNumericCellValue(),
                     row.getCell(4).getStringCellValue()));
-            idx++;
         }
         myExcelBook.close();
         mainActivityViewModel.add(diplomas);
-        generatePDF(dpl);
+        generatePDF(diplomas);
     }
 
     private void generatePDF(List<Diploma> diplomas) {
         PdfDocument pdfDocument = new PdfDocument();
         Paint title = new Paint();
         Paint paint = new Paint();
-        int c = 1;
+        AtomicInteger c = new AtomicInteger(1);
+        mainActivityViewModel.count().observe(MainActivity.this, c::set);
+        c.getAndIncrement();
         for (Diploma diploma: diplomas) {
-
-            PdfDocument.PageInfo mypageInfo = new PdfDocument.PageInfo.Builder(1120, 792, c).create();
+            PdfDocument.PageInfo mypageInfo = new PdfDocument.PageInfo.Builder(630, 891, c.get()).create();
             PdfDocument.Page myPage = pdfDocument.startPage(mypageInfo);
             Canvas canvas = myPage.getCanvas();
-            canvas.drawBitmap(generateQR(diploma.token), 56, 40, paint);
+            canvas.drawBitmap(generateQR(c.get()), 0, 0, paint);
             title.setTypeface(Typeface.create(Typeface.DEFAULT, Typeface.NORMAL));
             title.setTypeface(Typeface.defaultFromStyle(Typeface.NORMAL));
-            title.setColor(ContextCompat.getColor(this, R.color.purple_200));
+            title.setColor(ContextCompat.getColor(this, R.color.black));
             title.setTextSize(15);
             title.setTextAlign(Paint.Align.CENTER);
-            canvas.drawText(diploma.surname + ' ' + diploma.name + ' ' + diploma.pantonymic + ' ' + diploma.place + ' ' + diploma.schoolid, 396, 560, title);
-            c++;
+            canvas.drawText(diploma.surname + ' ' + diploma.name + ' ' + diploma.patronymic + ' ' + diploma.place + ' ' + diploma.schoolid, 396, 560, title);
+            c.getAndIncrement();
             pdfDocument.finishPage(myPage);
         }
         File file = new File(Environment.getExternalStorageDirectory() + "/" + File.separator + "Diplomas.pdf");
@@ -200,9 +199,9 @@ public class MainActivity extends AppCompatActivity {
         StringBuilder data = new StringBuilder(Integer.toString(num));
         while (data.length() != 8)
             data.insert(0, '0');
-
         try {
-            BitMatrix bitMatrix = writer.encode(data.toString(), BarcodeFormat.QR_CODE, 512, 512);
+            Log.d(TAG, "generateQR: " + data);
+            BitMatrix bitMatrix = writer.encode(data.toString(), BarcodeFormat.QR_CODE, 128, 128);
             int width = bitMatrix.getWidth();
             int height = bitMatrix.getHeight();
             Bitmap bmp = Bitmap.createBitmap(width, height, Bitmap.Config.RGB_565);

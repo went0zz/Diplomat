@@ -29,16 +29,16 @@ public class MainActivityViewModel extends AndroidViewModel {
         super.onCleared();
         compositeDisposable.dispose();
     }
-    public LiveData<List<Diploma>> getDiplomas() {
-        return diplomasDatabase.diplomasDAO().getDiplomas();
-    }
-    public LiveData<Integer> count() {
-        return diplomasDatabase.diplomasDAO().count();
-    }
     public void add(List<Diploma> diplomas) {
         for (Diploma diploma: diplomas) {
             Disposable disposable = diplomasDatabase.diplomasDAO().add(diploma).subscribeOn(Schedulers.io()).observeOn(AndroidSchedulers.mainThread()).subscribe();
             compositeDisposable.add(disposable);
         }
+    }
+    public LiveData<Diploma> getDiploma(int token) {
+        return diplomasDatabase.diplomasDAO().getDiploma(token);
+    }
+    public  LiveData<Integer> count() {
+        return diplomasDatabase.diplomasDAO().count();
     }
 }

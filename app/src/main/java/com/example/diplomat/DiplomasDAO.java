@@ -17,5 +17,6 @@ public interface DiplomasDAO {
     LiveData<List<Diploma>> getDiplomas();
     @Insert
     Completable add(Diploma diploma);
-
+    @Query("SELECT * FROM diplomas WHERE token = :id")
+    LiveData<Diploma> getDiploma(int id);
 }

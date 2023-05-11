@@ -13,7 +13,6 @@ public class Diploma {
     public String name;
     public String surname;
     public String patronymic;
-    public String pantonymic;
     public String place;
 
     public Diploma(int token, String name, String surname, String patronymic, int schoolid, String place) {
@@ -26,12 +25,6 @@ public class Diploma {
     }
     @Ignore
     public Diploma(String name, String surname, String patronymic, int schoolid, String place) {
-
-        this.token = 0;
-        this.schoolid = schoolid;
-        this.name = name;
-        this.surname = surname;
-        this.patronymic = patronymic;
-        this.place = place;
+        this(0, name, surname, patronymic, schoolid, place);
     }
 }
