@@ -38,7 +38,7 @@ public class MainActivityViewModel extends AndroidViewModel {
     public LiveData<Diploma> getDiploma(int token) {
         return diplomasDatabase.diplomasDAO().getDiploma(token);
     }
-    public  LiveData<Integer> count() {
+    public LiveData<Integer> count() {
         return diplomasDatabase.diplomasDAO().count();
     }
 }

@@ -68,7 +68,7 @@ public class MainActivity extends AppCompatActivity {
         textView = findViewById(R.id.scanResult);
         mCodeScanner = new CodeScanner(this, scannerView);
 
-        mCodeScanner.setDecodeCallback(result -> runOnUiThread(() -> mainActivityViewModel.getDiploma(Integer.parseInt(result.getText())).observe(MainActivity.this, diploma -> textView.setText(diploma.surname + ' ' + diploma.name + ' ' + diploma.patronymic))));
+        mCodeScanner.setDecodeCallback(result -> runOnUiThread(() -> mainActivityViewModel.getDiploma(Integer.parseInt(result.getText())).observe(MainActivity.this, diploma -> textView.setText(diploma.surname + ' ' + diploma.name + ' ' + diploma.patronymic + '\n' + diploma.subject + '\n' + diploma.olympiadName + '\n' + diploma.schoolName))));
         scannerView.setOnClickListener(view -> mCodeScanner.startPreview());
         floatingActionButton.setOnClickListener(view -> {
             if (askForReadExternalStorage() && askForStorage())
@@ -121,8 +121,10 @@ public class MainActivity extends AppCompatActivity {
             diplomas.add(new Diploma(row.getCell(0).getStringCellValue(),
                     row.getCell(1).getStringCellValue(),
                     row.getCell(2).getStringCellValue(),
-                    (int) row.getCell(3).getNumericCellValue(),
-                    row.getCell(4).getStringCellValue()));
+                    row.getCell(3).getStringCellValue(),
+                    row.getCell(4).getStringCellValue(),
+                    getIntent().getStringExtra("olimpiad"),
+                    row.getCell(5).getStringCellValue()));
         }
         myExcelBook.close();
         mainActivityViewModel.add(diplomas);
@@ -133,7 +135,7 @@ public class MainActivity extends AppCompatActivity {
         PdfDocument pdfDocument = new PdfDocument();
         Paint title = new Paint();
         Paint paint = new Paint();
-        AtomicInteger c = new AtomicInteger(1);
+        AtomicInteger c = new AtomicInteger();
         mainActivityViewModel.count().observe(MainActivity.this, c::set);
         c.getAndIncrement();
         for (Diploma diploma: diplomas) {
@@ -144,9 +146,16 @@ public class MainActivity extends AppCompatActivity {
             title.setTypeface(Typeface.create(Typeface.DEFAULT, Typeface.NORMAL));
             title.setTypeface(Typeface.defaultFromStyle(Typeface.NORMAL));
             title.setColor(ContextCompat.getColor(this, R.color.black));
-            title.setTextSize(15);
+
             title.setTextAlign(Paint.Align.CENTER);
-            canvas.drawText(diploma.surname + ' ' + diploma.name + ' ' + diploma.patronymic + ' ' + diploma.place + ' ' + diploma.schoolid, 396, 560, title);
+            title.setTextSize(22);
+            canvas.drawText(diploma.olympiadName, 315, 100, title);
+            title.setTextSize(72);
+            canvas.drawText("Диплом", 315, 300, title);
+            title.setTextSize(32);
+            canvas.drawText(diploma.surname + ' ' + diploma.name + ' ' + diploma.patronymic, 315, 500, title);
+            canvas.drawText("по предмету", 315, 600, title);
+            canvas.drawText(diploma.subject, 315, 650, title);
             c.getAndIncrement();
             pdfDocument.finishPage(myPage);
         }
