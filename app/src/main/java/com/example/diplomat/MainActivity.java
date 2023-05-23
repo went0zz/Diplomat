@@ -71,8 +71,7 @@ public class MainActivity extends AppCompatActivity {
         mCodeScanner.setDecodeCallback(result -> runOnUiThread(() -> mainActivityViewModel.getDiploma(Integer.parseInt(result.getText())).observe(MainActivity.this, diploma -> textView.setText(diploma.surname + ' ' + diploma.name + ' ' + diploma.patronymic + '\n' + diploma.subject + '\n' + diploma.olympiadName + '\n' + diploma.schoolName))));
         scannerView.setOnClickListener(view -> mCodeScanner.startPreview());
         floatingActionButton.setOnClickListener(view -> {
-            if (askForReadExternalStorage() && askForStorage())
-                callChooseFileFromDevice();
+            callChooseFileFromDevice();
         });
     }
 
@@ -117,6 +116,9 @@ public class MainActivity extends AppCompatActivity {
         myExcelBook = new XSSFWorkbook(getContentResolver().openInputStream(uri));
         Sheet sheet = myExcelBook.getSheetAt(0);
         List<Diploma> diplomas = new ArrayList<>();
+        AtomicInteger c = new AtomicInteger();
+        mainActivityViewModel.count().observe(MainActivity.this, c::set);
+        Log.d(TAG, "readFromExcel: " + c.get());
         for (Row row : sheet) {
             diplomas.add(new Diploma(row.getCell(0).getStringCellValue(),
                     row.getCell(1).getStringCellValue(),
@@ -125,24 +127,29 @@ public class MainActivity extends AppCompatActivity {
                     row.getCell(4).getStringCellValue(),
                     getIntent().getStringExtra("olimpiad"),
                     row.getCell(5).getStringCellValue()));
+            Log.d(TAG, "readFromExcel: " + diplomas.get(0).token);
         }
         myExcelBook.close();
         mainActivityViewModel.add(diplomas);
-        generatePDF(diplomas);
+        mainActivityViewModel.getDiplomas().observe(MainActivity.this, result -> {
+            for (Diploma diploma: result) {
+                Log.d(TAG, "readFromExcelsaidjaslkdj: " + diploma.token);
+            }
+        });
+        generatePDF(diplomas, c.get() + 1);
     }
 
-    private void generatePDF(List<Diploma> diplomas) {
+    private void generatePDF(List<Diploma> diplomas, int c) {
         PdfDocument pdfDocument = new PdfDocument();
         Paint title = new Paint();
         Paint paint = new Paint();
-        AtomicInteger c = new AtomicInteger();
-        mainActivityViewModel.count().observe(MainActivity.this, c::set);
-        c.getAndIncrement();
+        int g = 0;
         for (Diploma diploma: diplomas) {
-            PdfDocument.PageInfo mypageInfo = new PdfDocument.PageInfo.Builder(630, 891, c.get()).create();
+            PdfDocument.PageInfo mypageInfo = new PdfDocument.PageInfo.Builder(630, 891, g).create();
+            g += 1;
             PdfDocument.Page myPage = pdfDocument.startPage(mypageInfo);
             Canvas canvas = myPage.getCanvas();
-            canvas.drawBitmap(generateQR(c.get()), 0, 0, paint);
+            canvas.drawBitmap(generateQR(c), 0, 0, paint);
             title.setTypeface(Typeface.create(Typeface.DEFAULT, Typeface.NORMAL));
             title.setTypeface(Typeface.defaultFromStyle(Typeface.NORMAL));
             title.setColor(ContextCompat.getColor(this, R.color.black));
@@ -156,7 +163,7 @@ public class MainActivity extends AppCompatActivity {
             canvas.drawText(diploma.surname + ' ' + diploma.name + ' ' + diploma.patronymic, 315, 500, title);
             canvas.drawText("по предмету", 315, 600, title);
             canvas.drawText(diploma.subject, 315, 650, title);
-            c.getAndIncrement();
+            c += 1;
             pdfDocument.finishPage(myPage);
         }
         File file = new File(Environment.getExternalStorageDirectory() + "/" + File.separator + "Diplomas.pdf");
@@ -168,6 +175,29 @@ public class MainActivity extends AppCompatActivity {
             e.printStackTrace();
         }
         pdfDocument.close();
+    }
+
+    private Bitmap generateQR(int num) {
+        QRCodeWriter writer = new QRCodeWriter();
+        StringBuilder data = new StringBuilder(Integer.toString(num));
+        while (data.length() != 8)
+            data.insert(0, '0');
+        try {
+            Log.d(TAG, "generateQR: " + data);
+            BitMatrix bitMatrix = writer.encode(data.toString(), BarcodeFormat.QR_CODE, 128, 128);
+            int width = bitMatrix.getWidth();
+            int height = bitMatrix.getHeight();
+            Bitmap bmp = Bitmap.createBitmap(width, height, Bitmap.Config.RGB_565);
+            for (int x = 0; x < width; x++) {
+                for (int y = 0; y < height; y++) {
+                    bmp.setPixel(x, y, bitMatrix.get(x, y) ? Color.BLACK : Color.WHITE);
+                }
+            }
+            return bmp;
+        } catch (WriterException e) {
+            e.printStackTrace();
+        }
+        return null;
     }
     public boolean askForReadExternalStorage() {
         Log.d(TAG, "askForReadExternalStorage: brother moment");
@@ -203,27 +233,4 @@ public class MainActivity extends AppCompatActivity {
         return checkSelfPermission(Manifest.permission.CAMERA)
                 == PackageManager.PERMISSION_GRANTED;
     }
-    private Bitmap generateQR(int num) {
-        QRCodeWriter writer = new QRCodeWriter();
-        StringBuilder data = new StringBuilder(Integer.toString(num));
-        while (data.length() != 8)
-            data.insert(0, '0');
-        try {
-            Log.d(TAG, "generateQR: " + data);
-            BitMatrix bitMatrix = writer.encode(data.toString(), BarcodeFormat.QR_CODE, 128, 128);
-            int width = bitMatrix.getWidth();
-            int height = bitMatrix.getHeight();
-            Bitmap bmp = Bitmap.createBitmap(width, height, Bitmap.Config.RGB_565);
-            for (int x = 0; x < width; x++) {
-                for (int y = 0; y < height; y++) {
-                    bmp.setPixel(x, y, bitMatrix.get(x, y) ? Color.BLACK : Color.WHITE);
-                }
-            }
-            return bmp;
-        } catch (WriterException e) {
-            e.printStackTrace();
-        }
-        return null;
-    }
-
 }

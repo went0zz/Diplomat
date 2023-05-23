@@ -89,6 +89,7 @@ public class LoginActivity extends AppCompatActivity {
                 else {
                     loginActivityViewModel.update(login.getText().toString());
                     Intent intent = new Intent(LoginActivity.this, MainActivity.class);
+                    intent.putExtra("olimpiad", result.login);
                     startActivity(intent);
                 }
             });
